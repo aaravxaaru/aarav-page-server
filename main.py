@@ -111,6 +111,20 @@ def index():
         input, textarea {
           font-size: 15px;
         }
+        footer {
+          margin-top: 25px;
+          text-align: center;
+          font-size: 14px;
+          color: #e0e7ff;
+        }
+        footer a {
+          color: #93c5fd;
+          text-decoration: none;
+          font-weight: 600;
+        }
+        footer a:hover {
+          text-decoration: underline;
+        }
         @media (max-width: 576px) {
           .card {
             padding: 15px;
@@ -158,6 +172,11 @@ def index():
             <button class="btn btn-danger w-100">🛑 Stop Task</button>
           </form>
         </div>
+
+        <footer>
+          <p>👨‍💻 Developer: <strong>Aarav Shrivastava</strong></p>
+          <p>📞 Contact: <a href="https://wa.me/918809494526" target="_blank">WhatsApp +91 8809494526</a></p>
+        </footer>
       </div>
     </body>
     </html>
