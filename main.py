@@ -120,9 +120,6 @@ INDEX_HTML = """
       </div>
       <button type="submit" class="btn btn-danger btn-submit mt-3">Stop Task</button>
     </form>
-    
-    <div class="mt-3 text-center">
-      <a class="btn btn-outline-secondary w-100" href="/status">View Active Tasks</a>
     </div>
   </div>
 </body>
